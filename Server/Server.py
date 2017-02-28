@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import SocketServer
-
+import json
+import time
 """
 Variables and functions that must be used by all the ClientHandler objects
 must be written here (e.g. a dictionary for connected clients)
@@ -25,8 +26,20 @@ class ClientHandler(SocketServer.BaseRequestHandler):
         # Loop that listens for messages from the client
         while True:
             received_string = self.connection.recv(4096)
-            
+            if received_string:
+                decoded_string = json.loads(received_string)
+            print decoded_string
+            timestamp = time.ctime()
+            sender = 'Server'
+            response = 'error'
+            content = 'Have not implemented server code yet'
+            response = {'timestamp': timestamp,
+                        'sender': sender,
+                        'response': response,
+                        'content': content}
+            self.connection.send(json.dumps(response))
             # TODO: Add handling of received payload from client
+
 
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
@@ -49,5 +62,7 @@ if __name__ == "__main__":
     print 'Server running...'
 
     # Set up and initiate the TCP server
+    SocketServer.TCPServer.allow_reuse_address = True
+
     server = ThreadedTCPServer((HOST, PORT), ClientHandler)
     server.serve_forever()

@@ -25,6 +25,11 @@ class Client:
     def run(self):
         # Initiate the connection to the server
         self.connection.connect((self.host, self.server_port))
+        reciever = MessageReceiver(self, self.connection)
+        reciever.start()
+        pass
+
+
 
     def disconnect(self):
         # TODO: Handle disconnection
@@ -33,7 +38,10 @@ class Client:
 
     def receive_message(self, message):
         # TODO: Handle incoming message
-        message = self.connection.recv(1024)
+        parser = MessageParser()
+        parsed = parser.parse(message)
+        print parsed
+        #message = self.connection.recv(1024)
         #pass
 
     def send_payload(self, data):
@@ -50,6 +58,7 @@ class Client:
         # Sort the commands by length. We assume we only get request,content or request, None
         command_length = len(command.split())
         if command_length == 1:
+            request = command
             content = None
         elif command_length == 2:
             request, content = command.split()
@@ -57,7 +66,7 @@ class Client:
             return False
 
         # Error checking to make sure we dont send login without username or logout with a command
-        if request == 'login' or 'msg' and content!=None:
+        if request == 'login' or 'msg' and content!= None:
             payload = self.encode_payload(request, content)
 
         elif request == 'logout' or 'names' or 'help' and content == None:
@@ -68,8 +77,7 @@ class Client:
 
         return payload
 
-    def send_payload_from_user_input(self):
-        command = raw_input('Enter command here: ')
+    def send_payload_from_user_input(self, command):
         payload = self.create_request(command)
         self.send_payload(payload)
 
@@ -86,3 +94,12 @@ if __name__ == '__main__':
     No alterations are necessary
     """
     client = Client('localhost', 9998)
+
+    while True:
+        command = raw_input('')
+        if command == 'quit':
+            break
+
+        client.send_payload_from_user_input(command)
+    print 'Thanks for using KTNirc'
+    client.disconnect()
