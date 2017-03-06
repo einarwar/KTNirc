@@ -39,7 +39,7 @@ class Client:
     def receive_message(self, message):
         # TODO: Handle incoming message
         parser = MessageParser()
-        parsed = parser.parse(message)
+        parsed = parser.parse(json.loads(message))
         print parsed
         #message = self.connection.recv(1024)
         #pass

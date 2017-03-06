@@ -2,6 +2,7 @@
 import SocketServer
 import json
 import time
+import re
 """
 Variables and functions that must be used by all the ClientHandler objects
 must be written here (e.g. a dictionary for connected clients)
@@ -15,6 +16,8 @@ class ClientHandler(SocketServer.BaseRequestHandler):
     logic for the server, you must write it outside this class
     """
 
+
+
     def handle(self):
         """
         This method handles the connection between a client and the server.
@@ -22,24 +25,94 @@ class ClientHandler(SocketServer.BaseRequestHandler):
         self.ip = self.client_address[0]
         self.port = self.client_address[1]
         self.connection = self.request
-
+        self.users = []
+        self.isLoggedIn = False
+        self.username = None
         # Loop that listens for messages from the client
         while True:
+            print 'Users connected: {}'.format(self.users)
             received_string = self.connection.recv(4096)
             if received_string:
                 decoded_string = json.loads(received_string)
             print decoded_string
-            timestamp = time.ctime()
-            sender = 'Server'
-            response = 'error'
-            content = 'Have not implemented server code yet'
-            response = {'timestamp': timestamp,
-                        'sender': sender,
-                        'response': response,
-                        'content': content}
-            self.connection.send(json.dumps(response))
+
+            user_request = decoded_string['request']
+            user_content = decoded_string['content']
+            self.timestamp = time.ctime()
+            self.sender = 'Server'
+
+            if user_request == 'login':
+                self.handle_user_login(user_content)
+
+            elif user_request == 'logout':
+                self.handle_user_logout()
+
+            elif user_request == 'msg':
+                self.handle_user_msg(user_content)
+
+            else:
+                self.response = 'error'
+                self.content = 'Unknown request'
+
+
+            return_message = {'timestamp': self.timestamp,
+                        'sender': self.sender,
+                        'response': self.response,
+                        'content': self.content}
+            self.connection.send(json.dumps(return_message))
             # TODO: Add handling of received payload from client
 
+    def handle_user_login(self, username):
+        if self.isLoggedIn:
+            self.response = 'error'
+            self.content = 'Already logged in'
+
+        elif username is 'None':
+            self.response = 'error'
+            self.content = 'No username given'
+
+        elif re.match('[a-zA-Z\d]+$', username) is not None:
+            if username not in self.users:
+                self.users.append(username)
+                self.username = username
+                self.isLoggedIn = True
+                self.response = 'info'
+                self.content = 'Login successfull'
+            else:
+                self.response = 'error'
+                self.content = 'Username already taken'
+        else:
+            self.response = 'error'
+            self.content = 'Username not accepted'
+
+    def handle_user_logout(self):
+        if self.isLoggedIn:
+            self.isLoggedIn = False
+            self.users.remove(self.username)
+            self.username = None
+            self.response = 'info'
+            self.content = 'Logout successful'
+        else:
+            self.response = 'error'
+            self.content = 'You are not logged in'
+
+    def handle_user_msg(self, message):
+        if self.isLoggedIn:
+            self.response = 'message'
+            if message == None:
+                self.content = ''
+            else:
+                self.content = message
+            self.sender = self.username
+        else:
+            self.response = 'error'
+            self.content = 'You are not logged in'
+
+    def handle_user_history(self):
+        pass
+
+    def handle_user_help(self):
+        pass
 
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
